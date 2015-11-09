@@ -27,7 +27,7 @@ outer:
 	for {
 		tok := lex.Next()
 		switch tok.typ {
-		case tokenEOF:
+		case tokenEOF, tokenTerminator:
 			break outer
 		case tokenERROR:
 			res = append(res, fmt.Sprintf("%s: %q", lex.Error(), tok.value))
@@ -46,12 +46,12 @@ func TestLineLexerTokens(t *testing.T) {
 		{"", []tokenType{tokenEOF}},
 		{"abc", []tokenType{tokenValue, tokenEOF}},
 		{"100", []tokenType{tokenValue, tokenEOF}},
-		{"*001", []tokenType{tokenCtrlTag, tokenEOF}},
+		{"*001^", []tokenType{tokenCtrlTag, tokenTerminator, tokenEOF}},
 		{"*009", []tokenType{tokenCtrlTag, tokenEOF}},
 		{"*100  ", []tokenType{tokenTag, tokenEOF}},
 		{"*245  ", []tokenType{tokenTag, tokenEOF}},
 		{"*100_1", []tokenType{tokenTag, tokenEOF}},
-		{"*100  $aa\n*101  $ab", []tokenType{tokenTag, tokenSubField, tokenValue, tokenTag, tokenSubField, tokenValue, tokenEOF}},
+		{"*100  $aa\n*101  $ab\n^", []tokenType{tokenTag, tokenSubField, tokenValue, tokenTag, tokenSubField, tokenValue, tokenTerminator, tokenEOF}},
 		{"*000 01307nam0 2200349 I 450", []tokenType{tokenCtrlTag, tokenValue, tokenEOF}},
 	}
 
@@ -75,7 +75,8 @@ func TestLineLexerValue(t *testing.T) {
 		{"*001", []string{"001"}},
 		{"*009", []string{"009"}},
 		{"*24510", []string{"24510"}},
-		{"*1001_$aSandburg, Carl$d1878-1967", []string{"1001_", "a", "Sandburg, Carl", "d", "1878-1967"}},
+		{"*24510\n*600  \n^", []string{"24510", "600  "}},
+		{"*1001_$aØrjasæter, Tordis$d1927-$jn.", []string{"1001_", "a", "Ørjasæter, Tordis", "d", "1927-", "j", "n."}},
 		{"*100  $aa\n*101  $bb", []string{"100  ", "a", "a", "101  ", "b", "b"}},
 		{"*000xyz", []string{"000", "xyz"}},
 	}
@@ -83,7 +84,7 @@ func TestLineLexerValue(t *testing.T) {
 	for _, test := range tests {
 		tokens := lexValues(test.input)
 		if !reflect.DeepEqual(tokens, test.want) {
-			t.Errorf("lineLexer lexing %q got %q; want %v",
+			t.Errorf("lineLexer lexing %q got %q; want %q",
 				test.input, tokens, test.want)
 		}
 	}

@@ -34,6 +34,8 @@ const (
 	tokenTag      // 5 chars (3 char for tag, 2 for indicators)
 	tokenSubField // 1 char
 	tokenValue    // value of subfield or control field
+	tokenTerminator
+
 // tokenLeader TODO
 )
 
@@ -51,6 +53,8 @@ func (t tokenType) String() string {
 		return "tokenSubField"
 	case tokenValue:
 		return "tokenValue"
+	case tokenTerminator:
+		return "tokenTerminator"
 	default:
 		panic("TODO")
 	}
@@ -59,7 +63,7 @@ func (t tokenType) String() string {
 type lineLexer struct {
 	r     *bufio.Reader
 	input []byte // current record beeing lexed
-	line  int    // line number in input stream
+	line  int    // TODO line number in input stream TODO?
 	start int    // start of current token
 	pos   int    // position in line
 	err   string
@@ -118,8 +122,10 @@ func (l *lineLexer) Next() token {
 			if len(line) == 0 {
 				return token{tokenEOF, ""}
 			}
+			l.start, l.pos = 0, 0
 			l.input = line
 		case nil:
+			l.start, l.pos = 0, 0
 			l.input = line
 		default:
 			l.err = err.Error()
@@ -127,11 +133,12 @@ func (l *lineLexer) Next() token {
 		}
 	}
 
+	l.start = l.pos
 	ch := l.nextRune()
 
 	switch ch {
 	case '^':
-		return l.Next()
+		return token{tokenTerminator, ""}
 	case '\n':
 		l.start = l.pos
 		return l.Next()
@@ -153,9 +160,10 @@ func (l *lineLexer) Next() token {
 		if !l.consume(2) {
 			return token{tokenEOF, ""}
 		}
-		if l.start-l.pos != 5 {
+		if l.pos-l.start != 5 {
 			// TODO add test
 			l.err = "invalid tag"
+			return token{tokenERROR, l.value()}
 		}
 		return token{tokenTag, l.value()}
 	case Separator:
@@ -166,7 +174,6 @@ func (l *lineLexer) Next() token {
 		}
 		return token{tokenSubField, l.value()}
 	default:
-		l.start = l.pos - 1
 
 		// lexing a value
 		l.consumeUntil('$')

@@ -69,6 +69,8 @@ func (d *Decoder) Decode() (Record, error) {
 	case tokenERROR:
 		line, col := d.lex.Pos()
 		return r, fmt.Errorf("%d:%d %v: %q", line, col, d.lex.Error(), tok.value)
+	case tokenTerminator:
+		return d.Decode()
 	case tokenEOF:
 		return r, io.EOF
 	case tokenTag:
@@ -79,6 +81,7 @@ func (d *Decoder) Decode() (Record, error) {
 	}
 
 	// parse data fields (tok is allready a tag)
+datafields:
 	for {
 		f := dField{
 			Tag:  tok.value[0:3],
@@ -105,16 +108,24 @@ func (d *Decoder) Decode() (Record, error) {
 		switch tok.typ {
 		case tokenTag:
 			continue
-		case tokenEOF:
-			break
+		case tokenEOF, tokenTerminator:
+			break datafields
 		default:
+			fmt.Printf("%s %s", tok.typ, tok.value)
 			panic("TODO")
 		}
 
 		// look for more data fields
 		tok = d.lex.Next()
-		if tok.typ != tokenTag {
-			break
+		switch tok.typ {
+		case tokenEOF, tokenTerminator:
+			break datafields
+		case tokenTag:
+			// continue
+		default:
+			fmt.Printf("%s %s", tok.typ, tok.value)
+			panic("TODO")
+
 		}
 	}
 	//fmt.Printf("%v", r)
