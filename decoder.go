@@ -5,11 +5,6 @@ import (
 	"io"
 )
 
-var (
-	Terminator byte = 0x5E // ^
-	Separator       = '$'
-)
-
 // Format represents a MARC serialization format
 type Format int
 
@@ -115,18 +110,6 @@ datafields:
 			panic("TODO")
 		}
 
-		// look for more data fields
-		tok = d.lex.Next()
-		switch tok.typ {
-		case tokenEOF, tokenTerminator:
-			break datafields
-		case tokenTag:
-			// continue
-		default:
-			fmt.Printf("%s %s", tok.typ, tok.value)
-			panic("TODO")
-
-		}
 	}
 	//fmt.Printf("%v", r)
 	return r, nil

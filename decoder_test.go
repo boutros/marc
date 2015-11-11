@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var lmarc1 string = `*000     c
+var lmarc1 = `*000     c
 *0010010463
 *008871001                a          0 nob r
 *015  $a29$bBibliofilID
@@ -42,7 +42,7 @@ func BenchmarkBaseline(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		r := bufio.NewReader(bytes.NewBufferString(lmarc1))
 		b.SetBytes(int64(len(lmarc1)))
-		_, err := r.ReadBytes(Terminator)
+		_, err := r.ReadBytes(0x5E)
 		if err != nil {
 			b.Fatal(err)
 		}

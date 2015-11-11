@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 )
 
-const newline = 0x0D
 const eof = rune(0)
 
 type lexer interface {
@@ -116,7 +115,7 @@ func (l *lineLexer) consumeUntil(r rune) {
 
 func (l *lineLexer) Next() token {
 	if l.pos >= len(l.input) {
-		line, err := l.r.ReadBytes(Terminator)
+		line, err := l.r.ReadBytes(0x5E)
 		switch err {
 		case io.EOF:
 			if len(line) == 0 {
@@ -166,7 +165,7 @@ func (l *lineLexer) Next() token {
 			return token{tokenERROR, l.value()}
 		}
 		return token{tokenTag, l.value()}
-	case Separator:
+	case '$':
 		l.start = l.pos
 		ch := l.nextRune()
 		if ch == eof {

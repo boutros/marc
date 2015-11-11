@@ -5,6 +5,7 @@ import (
 	"io"
 )
 
+// Record represents a bibliographic record, serializable to MARC formt
 type Record struct {
 	leader     [24]byte
 	ctrlFields []cField
@@ -28,6 +29,7 @@ type subField struct {
 	Value string
 }
 
+// DumpTo dumps a Record to the give writer
 func (r Record) DumpTo(w io.Writer, colors bool) {
 	bold, reset, faint, green := "", "", "", ""
 	if colors {
