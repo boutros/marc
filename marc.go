@@ -29,11 +29,12 @@ type subField struct {
 }
 
 func (r Record) DumpTo(w io.Writer, colors bool) {
-	bold, reset, faint := "", "", ""
+	bold, reset, faint, green := "", "", "", ""
 	if colors {
 		bold = "\x1b[1m"
 		reset = "\x1b[0m"
 		faint = "\x1b[2m"
+		green = "\x1b[32m"
 	}
 
 	orBlank := func(s string) string {
@@ -50,7 +51,10 @@ func (r Record) DumpTo(w io.Writer, colors bool) {
 		fmt.Fprintf(w, "%s%s %s%s%s%s ",
 			bold, d.Tag, faint, orBlank(d.Ind1), orBlank(d.Ind2), reset)
 		for _, s := range d.SubFields {
-			fmt.Fprintf(w, "%s[%s] %s%s ", faint, s.Code, reset, s.Value)
+			//if i > 0 {
+			//	fmt.Fprintf(w, "\n       ")
+			//}
+			fmt.Fprintf(w, "%s|%s %s%s ", green, s.Code, reset, s.Value)
 		}
 		fmt.Fprintf(w, "\n")
 	}
