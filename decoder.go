@@ -1,13 +1,11 @@
 package marc
 
 import (
-	"fmt"
+	"bufio"
+	//"fmt"
+	"bytes"
 	"io"
-)
-
-var (
-	Terminator byte = 0x5E // ^
-	Separator       = '$'
+	"unicode/utf8"
 )
 
 // Format represents a MARC serialization format
@@ -22,16 +20,17 @@ const (
 
 // Decoder parses MARC records from an input stream.
 type Decoder struct {
-	lex lexer
+	r     *bufio.Reader
+	input []byte
+	pos   int // position in input
+	f     Format
 }
 
 // NewDecoder returns a new Decoder using the given reader and format.
 func NewDecoder(r io.Reader, f Format) *Decoder {
-	switch f {
-	case LineMARC:
-		return &Decoder{lex: newLineLexer(r)}
-	default:
-		panic("TODO")
+	return &Decoder{
+		r: bufio.NewReader(r),
+		f: f,
 	}
 }
 
@@ -50,84 +49,124 @@ func (d *Decoder) DecodeAll() ([]Record, error) {
 }
 
 func (d *Decoder) Decode() (Record, error) {
-	var r Record
-	var tok token
-
-	// todo parse leader
-
-	// parse control fields
-	for tok = d.lex.Next(); tok.typ == tokenCtrlTag; tok = d.lex.Next() {
-		f := cField{Tag: tok.value}
-		tok = d.lex.Next()
-		if tok.typ != tokenValue {
-			break
-		}
-		f.Field = tok.value
-		r.ctrlFields = append(r.ctrlFields, f)
-	}
-	switch tok.typ {
-	case tokenERROR:
-		line, col := d.lex.Pos()
-		return r, fmt.Errorf("%d:%d %v: %q", line, col, d.lex.Error(), tok.value)
-	case tokenTerminator:
-		return d.Decode()
-	case tokenEOF:
-		return r, io.EOF
-	case tokenTag:
-		// go on to parse data fields
+	switch d.f {
+	case LineMARC:
+		return d.decodeLineMARC()
 	default:
-		fmt.Printf("%v", tok)
 		panic("TODO")
 	}
+}
 
-	// parse data fields (tok is allready a tag)
-datafields:
+func (d *Decoder) next() rune {
+	ch, size := utf8.DecodeRune(d.input[d.pos:])
+	d.pos += size
+	return ch
+}
+
+func (d *Decoder) peek() rune {
+	ch, _ := utf8.DecodeRune(d.input[d.pos:])
+	return ch
+}
+
+func (d *Decoder) consumeUntil(r rune) bool {
 	for {
-		f := dField{
-			Tag:  tok.value[0:3],
-			Ind1: tok.value[3:4],
-			Ind2: tok.value[4:5],
+		ch, size := utf8.DecodeRune(d.input[d.pos:])
+		if size == 0 {
+			return false
+		}
+		if ch == r {
+			break
+		}
+		d.pos += size
+	}
+	return true
+}
+
+func (d *Decoder) consumeUntilOr(r1, r2 rune) bool {
+	for {
+		ch, size := utf8.DecodeRune(d.input[d.pos:])
+		if size == 0 {
+			return false
+		}
+		if ch == r1 || ch == r2 {
+			break
+		}
+		d.pos += size
+	}
+	return true
+}
+
+func (d *Decoder) nextN(n int) string {
+	start := d.pos
+	for n > 0 {
+		_, size := utf8.DecodeRune(d.input[d.pos:])
+		d.pos += size
+		n--
+	}
+	return string(d.input[start:d.pos])
+}
+
+func (d *Decoder) decodeLineMARC() (r Record, err error) {
+	if d.input, err = d.r.ReadBytes(0x5E); err != nil {
+		return r, err
+	}
+	d.pos = 0
+
+	// Parse leader? Not in LineMARC?
+	// TODO research
+
+	if d.peek() == '\n' {
+		d.pos++
+	}
+
+	for d.next() == '*'  {
+		s := d.pos // keep track of start of tag
+		if bytes.HasPrefix(d.input[d.pos:], []byte("00")){
+			d.pos+=3
+			if len(d.input) < d.pos {
+				return r, nil
+			}
+			// Parse controlfield
+
+			f := cField{Tag: string(d.input[s:d.pos])}
+
+			if d.consumeUntil('\n') {
+				f.Value = string(d.input[s+3 : d.pos])
+				// consume and ignore \n
+				d.pos++
+			}
+			r.ctrlFields = append(r.ctrlFields, f)
+			continue
+		}
+		// Parse datafield
+
+		// consume last 3 chars tag + 2 chars indicators
+		d.pos+=5
+		if len(d.input) < d.pos {
+			return r, nil
 		}
 
-		// parse subFields
-		for {
-			tok = d.lex.Next()
-			if tok.typ != tokenSubField {
-				break
+		f := dField{
+			Tag:  string(d.input[s : s+3]),
+			Ind1: string(d.input[s+3 : s+4]),
+			Ind2: string(d.input[s+4 : s+5]),
+		}
+		// parse subfields
+		for d.next() == '$' {
+			sf := subField{Code: string(d.next())}
+			s = d.pos // keep track of subfield start
+			if d.consumeUntilOr('$', '\n') {
+				sf.Value = string(d.input[s:d.pos])
+				if d.peek() == '\n' {
+					f.SubFields = append(f.SubFields, sf)
+					d.pos++
+					break
+				}
 			}
-			sf := subField{Code: tok.value}
-			tok = d.lex.Next()
-			if tok.typ != tokenValue {
-				break
-			}
-			sf.Value = tok.value
 			f.SubFields = append(f.SubFields, sf)
 		}
 		r.dataFields = append(r.dataFields, f)
-
-		switch tok.typ {
-		case tokenTag:
-			continue
-		case tokenEOF, tokenTerminator:
-			break datafields
-		default:
-			fmt.Printf("%s %s", tok.typ, tok.value)
-			panic("TODO")
-		}
-
-		// look for more data fields
-		tok = d.lex.Next()
-		switch tok.typ {
-		case tokenEOF, tokenTerminator:
-			break datafields
-		case tokenTag:
-			// continue
-		default:
-			fmt.Printf("%s %s", tok.typ, tok.value)
-			panic("TODO")
-
-		}
 	}
-	//fmt.Printf("%v", r)
+
 	return r, nil
 }

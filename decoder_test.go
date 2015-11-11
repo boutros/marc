@@ -42,7 +42,7 @@ func BenchmarkBaseline(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		r := bufio.NewReader(bytes.NewBufferString(lmarc1))
 		b.SetBytes(int64(len(lmarc1)))
-		_, err := r.ReadBytes(Terminator)
+		_, err := r.ReadBytes(0x5E)
 		if err != nil {
 			b.Fatal(err)
 		}
