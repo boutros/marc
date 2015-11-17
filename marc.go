@@ -1,8 +1,11 @@
 package marc
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"strings"
+	"unicode/utf8"
 )
 
 // Record represents a bibliographic record, serializable to MARC formt
@@ -52,11 +55,29 @@ func (r Record) DumpTo(w io.Writer, colors bool) {
 	for _, d := range r.dataFields {
 		fmt.Fprintf(w, "%s%s %s%s%s%s ",
 			bold, d.Tag, faint, orBlank(d.Ind1), orBlank(d.Ind2), reset)
+		var b bytes.Buffer
 		for _, s := range d.SubFields {
-			//if i > 0 {
-			//	fmt.Fprintf(w, "\n       ")
-			//}
-			fmt.Fprintf(w, "%s|%s %s%s ", green, s.Code, reset, s.Value)
+			fmt.Fprintf(&b, "|%s %s ", s.Code, s.Value)
+		}
+		fields := strings.Fields(b.String())
+		c := 0
+		const width = 70
+		for _, f := range fields {
+			wlen := utf8.RuneCountInString(f)
+			if c+wlen > width {
+				w.Write([]byte("\n       "))
+				c = 0
+				if f[0] != '|' {
+					w.Write([]byte("   "))
+				}
+			}
+			if f[0] == '|' {
+				fmt.Fprintf(w, "%s%s%s", green, f, reset)
+			} else {
+				w.Write([]byte(f))
+			}
+			c += wlen
+			w.Write([]byte(" "))
 		}
 		fmt.Fprintf(w, "\n")
 	}
