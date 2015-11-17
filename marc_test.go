@@ -25,8 +25,9 @@ func TestDump(t *testing.T) {
 090 __ |c 242 |d Kar
 100 _0 |a Karlén, Barbro |d 1954- |j sv. |3 10008600
 240 10 |a I begynnelsen skapade Gud
-245 10 |a I begynnelsen skapte Gud |b dikt og salmer i norsk gjendiktning   ved Inger Hagerup
-        ; prosaen overs. av Gunnel Malmström ; illus. av Vanja Hübinette-Simonson
+245 10 |a I begynnelsen skapte Gud |b dikt og salmer i norsk gjendiktning ved
+        Inger Hagerup ; prosaen overs. av Gunnel Malmström ; illus. av Vanja
+        Hübinette-Simonson
 260 __ |a Oslo |b Aschehoug |c 1968
 300 __ |a 97 s. |b ill.
 574 __ |a Originaltittel: I begynnelsen skapade Gud
