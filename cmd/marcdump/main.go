@@ -14,14 +14,13 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("marcdump: ")
 	var (
-		useColors = flag.Bool("-color", true, "use colored terminal output")
-		filter    = flag.String("-filter", "", "only print specified fields, ex.: 100b,245a")
+		useColors = flag.Bool("color", true, "use colored terminal output")
+		filter    = flag.String("filter", "", "only print specified fields, ex.: 100b,245a")
 	)
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: marcdump [options...] file\n\n2Options:\n")
+		fmt.Fprintf(os.Stderr, "Usage: marcdump [options...] file\n\nOptions:\n")
 		flag.PrintDefaults()
-
 	}
 
 	if len(os.Args) < 2 {
@@ -29,7 +28,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	f, err := os.Open(os.Args[1])
+	flag.Parse()
+
+	f, err := os.Open(os.Args[len(os.Args)-1])
 	if err != nil {
 		log.Fatal(err)
 	}
