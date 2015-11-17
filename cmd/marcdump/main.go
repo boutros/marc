@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/boutros/marc"
 )
@@ -23,7 +24,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	if len(os.Args) < 2 {
+	if len(os.Args) < 2 || strings.HasPrefix(os.Args[len(os.Args)-1], "-") {
 		flag.Usage()
 		os.Exit(1)
 	}
