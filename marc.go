@@ -8,6 +8,8 @@ import (
 	"unicode/utf8"
 )
 
+const colWidth = 70
+
 // Record represents a bibliographic record, serializable to MARC formt
 type Record struct {
 	leader     [24]byte
@@ -55,29 +57,39 @@ func (r Record) DumpTo(w io.Writer, colors bool) {
 	for _, d := range r.dataFields {
 		fmt.Fprintf(w, "%s%s %s%s%s%s ",
 			bold, d.Tag, faint, orBlank(d.Ind1), orBlank(d.Ind2), reset)
+
 		var b bytes.Buffer
 		for _, s := range d.SubFields {
 			fmt.Fprintf(&b, "|%s %s ", s.Code, s.Value)
 		}
 		fields := strings.Fields(b.String())
+
+		// current rune-count in line
 		c := 0
-		const width = 70
+
 		for _, f := range fields {
 			wlen := utf8.RuneCountInString(f)
-			if c+wlen > width {
+			if c+wlen > colWidth {
+				// Wrap to new line and indent
 				w.Write([]byte("\n       "))
 				c = 0
 				if f[0] != '|' {
+					// Not subfield code; indent along with start of text in above line
 					w.Write([]byte("   "))
+					c += 2
 				}
 			}
 			if f[0] == '|' {
+				// subfield code, with color escape
 				fmt.Fprintf(w, "%s%s%s", green, f, reset)
 			} else {
+				// subfield value
 				w.Write([]byte(f))
 			}
-			c += wlen
+
+			// Write again space stripped by strings.Fields
 			w.Write([]byte(" "))
+			c += wlen + 1
 		}
 		fmt.Fprintf(w, "\n")
 	}
