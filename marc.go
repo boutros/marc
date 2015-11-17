@@ -14,7 +14,7 @@ type Record struct {
 
 type cField struct {
 	Tag   string // 3 chars
-	Field string // if Tag == "000"; 40 chars
+	Value string // if Tag == "000"; 40 chars
 }
 
 type dField struct {
@@ -47,7 +47,7 @@ func (r Record) DumpTo(w io.Writer, colors bool) {
 	}
 	fmt.Fprintf(w, "leader\n")
 	for _, c := range r.ctrlFields {
-		fmt.Fprintf(w, "%s%s%s %s\n", bold, c.Tag, reset, c.Field)
+		fmt.Fprintf(w, "%s%s%s %s\n", bold, c.Tag, reset, c.Value)
 	}
 	for _, d := range r.dataFields {
 		fmt.Fprintf(w, "%s%s %s%s%s%s ",
