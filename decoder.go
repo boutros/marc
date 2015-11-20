@@ -112,9 +112,6 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 	}
 	d.pos = 0
 
-	// Parse leader? Not in LineMARC?
-	// TODO research
-
 	if d.peek() == '\n' {
 		d.pos++
 	}

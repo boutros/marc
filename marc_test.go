@@ -15,8 +15,7 @@ func TestDump(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := `leader
-000      c
+	want := `000      c
 001 0010463
 008 871001                a          0 nob r
 015 __ |a 29 |b BibliofilID

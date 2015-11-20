@@ -50,7 +50,6 @@ func (r Record) DumpTo(w io.Writer, colors bool) {
 		}
 		return s
 	}
-	fmt.Fprintf(w, "leader\n")
 	for _, c := range r.ctrlFields {
 		fmt.Fprintf(w, "%s%s%s %s\n", bold, c.Tag, reset, c.Value)
 	}
