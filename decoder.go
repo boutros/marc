@@ -2,8 +2,8 @@ package marc
 
 import (
 	"bufio"
-	//"fmt"
 	"bytes"
+	"encoding/xml"
 	"io"
 	"unicode/utf8"
 )
@@ -13,24 +13,73 @@ type Format int
 
 // Supported serialization formats for encoding and decoding
 const (
-	MARC     Format = iota // Standard binary MARC (ISO2709)
+	unknown  Format = iota // Unparsable
+	MARC                   // Standard binary MARC (ISO2709)
 	LineMARC               // Line mode MARC (ex: NORMARC)
 	MARCXML                // MarcXchange (ISO25577)
 )
 
+type Encoder struct {
+	w      *bufio.Writer
+	xmlEnc *xml.Encoder
+	f      Format
+}
+
+func (enc *Encoder) Encode(r Record) error {
+	switch enc.f {
+	case MARCXML:
+		return enc.xmlEnc.Encode(r)
+	case LineMARC:
+		panic("Encode LineMARC TODO")
+	case MARC:
+		panic("Encode MARC TODO")
+	default:
+		panic("Encode Unknown")
+	}
+}
+
+func NewEncoder(w io.Writer, f Format) *Encoder {
+	switch f {
+	case MARCXML:
+		return &Encoder{xmlEnc: xml.NewEncoder(w), f: f}
+	default:
+		panic("NewDecoder: TODO")
+	}
+}
+
 // Decoder parses MARC records from an input stream.
 type Decoder struct {
-	r     *bufio.Reader
-	input []byte
-	pos   int // position in input
-	f     Format
+	r      *bufio.Reader
+	xmlDec *xml.Decoder
+	input  []byte
+	pos    int // position in input
+	f      Format
 }
 
 // NewDecoder returns a new Decoder using the given reader and format.
 func NewDecoder(r io.Reader, f Format) *Decoder {
-	return &Decoder{
-		r: bufio.NewReader(r),
-		f: f,
+	switch f {
+	case LineMARC:
+		return &Decoder{r: bufio.NewReader(r), f: f}
+	case MARCXML:
+		dec := xml.NewDecoder(r)
+	findStart:
+		for {
+			t, _ := dec.Token()
+			if t == nil {
+				break
+			}
+			switch se := t.(type) {
+			case xml.StartElement:
+				if se.Name.Local == "collection" {
+					break findStart
+				}
+			}
+		}
+
+		return &Decoder{xmlDec: dec, f: f}
+	default:
+		panic("NewDecoder: TODO")
 	}
 }
 
@@ -52,6 +101,10 @@ func (d *Decoder) Decode() (Record, error) {
 	switch d.f {
 	case LineMARC:
 		return d.decodeLineMARC()
+	case MARCXML:
+		var r Record
+		err := d.xmlDec.Decode(&r)
+		return r, err
 	default:
 		panic("TODO")
 	}
@@ -125,14 +178,14 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 			}
 			// Parse controlfield
 
-			f := cField{Tag: string(d.input[s:d.pos])}
+			f := CField{Tag: string(d.input[s:d.pos])}
 
 			if d.consumeUntil('\n') {
 				f.Value = string(d.input[s+3 : d.pos])
 				// consume and ignore \n
 				d.pos++
 			}
-			r.ctrlFields = append(r.ctrlFields, f)
+			r.CtrlFields = append(r.CtrlFields, f)
 			continue
 		}
 		// Parse datafield
@@ -143,14 +196,14 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 			return r, nil
 		}
 
-		f := dField{
+		f := DField{
 			Tag:  string(d.input[s : s+3]),
 			Ind1: string(d.input[s+3 : s+4]),
 			Ind2: string(d.input[s+4 : s+5]),
 		}
 		// parse subfields
 		for d.next() == '$' {
-			sf := subField{Code: string(d.next())}
+			sf := SubField{Code: string(d.next())}
 			s = d.pos // keep track of subfield start
 			if d.consumeUntilOr('$', '\n') {
 				sf.Value = string(d.input[s:d.pos])
@@ -162,7 +215,7 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 			}
 			f.SubFields = append(f.SubFields, sf)
 		}
-		r.dataFields = append(r.dataFields, f)
+		r.DataFields = append(r.DataFields, f)
 	}
 
 	return r, nil

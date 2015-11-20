@@ -2,6 +2,7 @@ package marc
 
 import (
 	"bytes"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"strings"
@@ -12,26 +13,27 @@ const colWidth = 70
 
 // Record represents a bibliographic record, serializable to MARC formt
 type Record struct {
-	leader     [24]byte
-	ctrlFields []cField
-	dataFields []dField
+	XMLName    xml.Name `xml:"record"`
+	Leader     string   `xml:"leader"` // 24 chars
+	CtrlFields []CField `xml:"controlfield"`
+	DataFields []DField `xml:"datafield"`
 }
 
-type cField struct {
-	Tag   string // 3 chars
-	Value string // if Tag == "000"; 40 chars
+type CField struct {
+	Tag   string `xml:"tag,attr"`  // 3 chars
+	Value string `xml:",chardata"` // if Tag == "000"; 40 chars
 }
 
-type dField struct {
-	Tag       string // 3 chars
-	Ind1      string // 1 char
-	Ind2      string // 1 char
-	SubFields []subField
+type DField struct {
+	Tag       string     `xml:"tag,attr"`  // 3 chars
+	Ind1      string     `xml:"ind1,attr"` // 1 char
+	Ind2      string     `xml:"ind2,attr"` // 1 char
+	SubFields []SubField `xml:"subfield"`
 }
 
-type subField struct {
-	Code  string // 1 char
-	Value string
+type SubField struct {
+	Code  string `xml:"code,attr"` // 1 char
+	Value string `xml:",chardata"`
 }
 
 // DumpTo dumps a Record to the give writer
@@ -50,10 +52,10 @@ func (r Record) DumpTo(w io.Writer, colors bool) {
 		}
 		return s
 	}
-	for _, c := range r.ctrlFields {
+	for _, c := range r.CtrlFields {
 		fmt.Fprintf(w, "%s%s%s %s\n", bold, c.Tag, reset, c.Value)
 	}
-	for _, d := range r.dataFields {
+	for _, d := range r.DataFields {
 		fmt.Fprintf(w, "%s%s %s%s%s%s ",
 			bold, d.Tag, faint, orBlank(d.Ind1), orBlank(d.Ind2), reset)
 
