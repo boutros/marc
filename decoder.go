@@ -62,22 +62,7 @@ func NewDecoder(r io.Reader, f Format) *Decoder {
 	case LineMARC:
 		return &Decoder{r: bufio.NewReader(r), f: f}
 	case MARCXML:
-		dec := xml.NewDecoder(r)
-	findStart:
-		for {
-			t, _ := dec.Token()
-			if t == nil {
-				break
-			}
-			switch se := t.(type) {
-			case xml.StartElement:
-				if se.Name.Local == "collection" {
-					break findStart
-				}
-			}
-		}
-
-		return &Decoder{xmlDec: dec, f: f}
+		return &Decoder{xmlDec: xml.NewDecoder(r), f: f}
 	default:
 		panic("NewDecoder: TODO")
 	}
@@ -103,11 +88,24 @@ func (d *Decoder) Decode() (Record, error) {
 		return d.decodeLineMARC()
 	case MARCXML:
 		var r Record
-		err := d.xmlDec.Decode(&r)
-		return r, err
+		for {
+			t, _ := d.xmlDec.Token()
+			if t == nil {
+				break
+			}
+			switch elem := t.(type) {
+			case xml.StartElement:
+				if elem.Name.Local == "record" {
+					err := d.xmlDec.DecodeElement(&r, &elem)
+					return r, err
+				}
+			}
+		}
+		return r, io.EOF
 	default:
 		panic("TODO")
 	}
+
 }
 
 func (d *Decoder) next() rune {

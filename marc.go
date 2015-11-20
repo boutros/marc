@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"unicode/utf8"
 )
@@ -15,8 +16,8 @@ const colWidth = 70
 type Record struct {
 	XMLName    xml.Name `xml:"record"`
 	Leader     string   `xml:"leader"` // 24 chars
-	CtrlFields []CField `xml:"controlfield"`
-	DataFields []DField `xml:"datafield"`
+	CtrlFields CFields  `xml:"controlfield"`
+	DataFields DFields  `xml:"datafield"`
 }
 
 type CField struct {
@@ -25,15 +26,92 @@ type CField struct {
 }
 
 type DField struct {
-	Tag       string     `xml:"tag,attr"`  // 3 chars
-	Ind1      string     `xml:"ind1,attr"` // 1 char
-	Ind2      string     `xml:"ind2,attr"` // 1 char
-	SubFields []SubField `xml:"subfield"`
+	Tag       string    `xml:"tag,attr"`  // 3 chars
+	Ind1      string    `xml:"ind1,attr"` // 1 char
+	Ind2      string    `xml:"ind2,attr"` // 1 char
+	SubFields SubFields `xml:"subfield"`
 }
 
 type SubField struct {
 	Code  string `xml:"code,attr"` // 1 char
 	Value string `xml:",chardata"`
+}
+
+type CFields []CField
+type DFields []DField
+type SubFields []SubField
+
+// Len satisfies the Sort interface for CFields.
+func (f CFields) Len() int { return len(f) }
+
+// Swap satisfies the Sort interface for CFields.
+func (f CFields) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
+
+// Less satisfies the Sort interface for CFields.
+func (f CFields) Less(i, j int) bool {
+	if f[i].Tag < f[j].Tag {
+		return true
+	}
+	if f[i].Value < f[j].Value {
+		return true
+	}
+	return false
+}
+
+// Len satisfies the Sort interface for DFields.
+func (f DFields) Len() int { return len(f) }
+
+// Swap satisfies the Sort interface for DFields.
+func (f DFields) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
+
+// Less satisfies the Sort interface for DFields.
+func (f DFields) Less(i, j int) bool {
+	if f[i].Tag < f[j].Tag {
+		return true
+	}
+	if f[i].Ind1 < f[j].Ind1 {
+		return true
+	}
+	if f[i].Ind2 < f[j].Ind2 {
+		return true
+	}
+	return false
+}
+
+// Len satisfies the Sort interface for SubFields.
+func (f SubFields) Len() int { return len(f) }
+
+// Swap satisfies the Sort interface for SubFields.
+func (f SubFields) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
+
+// Less satisfies the Sort interface for SubFields.
+func (f SubFields) Less(i, j int) bool {
+	if f[i].Code < f[j].Code {
+		return true
+	}
+	if f[i].Value < f[j].Value {
+		return true
+	}
+
+	return false
+}
+
+// Eq tests for Record equality.
+func (r Record) Eq(other Record) bool {
+	if r.Leader != other.Leader {
+		return false
+	}
+	if len(r.CtrlFields) != len(other.CtrlFields) {
+		return false
+	}
+	sort.Sort(r.CtrlFields)
+	sort.Sort(other.CtrlFields)
+	for i, f := range r.CtrlFields {
+		if other.CtrlFields[i].Tag != f.Tag {
+			return false
+		}
+	}
+	return true
 }
 
 // DumpTo dumps a Record to the give writer

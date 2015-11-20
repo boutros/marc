@@ -6,6 +6,85 @@ import (
 	"testing"
 )
 
+func TestRecordEq(t *testing.T) {
+	tests := []struct {
+		a, b string
+		want bool
+	}{
+		{
+			`<record> </record>`,
+			`<record></record>`,
+			true,
+		},
+		{
+			`<record><leader>01142cam  2200301 a 4500</leader></record>`,
+			`<record><leader>01142cam  2200301 a 4500</leader> </record>`,
+			true,
+		},
+		{
+			`<record><leader>    c                   </leader></record>`,
+			`<record><leader>    d                   </leader></record>`,
+			false,
+		},
+		{
+			`<record>
+				<controlfield tag="001">0010463</controlfield>
+			</record>`,
+			`<record>
+				<controlfield tag="001">0010463</controlfield>
+			</record>`,
+			true,
+		},
+		{
+			`<record>
+				<controlfield tag="001">0010463</controlfield>
+			</record>`,
+			`<record>
+				<controlfield tag="001">0010463</controlfield>
+			</record>`,
+			true,
+		},
+		{
+			`<record>
+				<controlfield tag="008">871001                a          0 nob r</controlfield>
+				<controlfield tag="001">0010463</controlfield>
+			</record>`,
+			`<record>
+				<controlfield tag="001">0010463</controlfield>
+				<controlfield tag="008">871001                a          0 nob r</controlfield>
+			</record>`,
+			true,
+		},
+		{
+			`<record>
+				<controlfield tag="001">0010463</controlfield>
+				<controlfield tag="008">871001                a          0 nob r</controlfield>
+			</record>`,
+			`<record>
+					<controlfield tag="001">0010463</controlfield>
+			</record>`,
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		dec := NewDecoder(bytes.NewBufferString(test.a), MARCXML)
+		a, err := dec.Decode()
+		if err != nil {
+			t.Fatal(err)
+		}
+		dec = NewDecoder(bytes.NewBufferString(test.b), MARCXML)
+		b, err := dec.Decode()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if eq := a.Eq(b); eq != test.want {
+			t.Errorf("\n%v\n%v\nequal => %v; want %v", a, b, eq, test.want)
+		}
+	}
+}
+
 func TestDump(t *testing.T) {
 	var b bytes.Buffer
 
