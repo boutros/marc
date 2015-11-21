@@ -52,7 +52,7 @@ func (f CFields) Less(i, j int) bool {
 	if f[i].Tag < f[j].Tag {
 		return true
 	}
-	if f[i].Value < f[j].Value {
+	if f[i].Tag == f[j].Tag && f[i].Value < f[j].Value {
 		return true
 	}
 	return false
@@ -69,10 +69,12 @@ func (f DFields) Less(i, j int) bool {
 	if f[i].Tag < f[j].Tag {
 		return true
 	}
-	if f[i].Ind1 < f[j].Ind1 {
+	if f[i].Tag == f[j].Tag && f[i].Ind1 < f[j].Ind1 {
 		return true
 	}
-	if f[i].Ind2 < f[j].Ind2 {
+	if f[i].Tag == f[j].Tag &&
+		f[i].Ind1 == f[j].Ind1 &&
+		f[i].Ind2 < f[j].Ind2 {
 		return true
 	}
 	return false
@@ -89,7 +91,7 @@ func (f SubFields) Less(i, j int) bool {
 	if f[i].Code < f[j].Code {
 		return true
 	}
-	if f[i].Value < f[j].Value {
+	if f[i].Code == f[j].Code && f[i].Value < f[j].Value {
 		return true
 	}
 
@@ -98,19 +100,53 @@ func (f SubFields) Less(i, j int) bool {
 
 // Eq tests for Record equality.
 func (r Record) Eq(other Record) bool {
+	// Leader equal?
 	if r.Leader != other.Leader {
 		return false
 	}
+
+	// Control Fields equal?
 	if len(r.CtrlFields) != len(other.CtrlFields) {
 		return false
 	}
+
 	sort.Sort(r.CtrlFields)
 	sort.Sort(other.CtrlFields)
+
 	for i, f := range r.CtrlFields {
-		if other.CtrlFields[i].Tag != f.Tag {
+		if other.CtrlFields[i] != f {
 			return false
 		}
 	}
+
+	// Data Fields equal?
+	if len(r.DataFields) != len(other.DataFields) {
+		return false
+	}
+
+	sort.Sort(r.DataFields)
+	sort.Sort(other.DataFields)
+
+	for i, f := range r.DataFields {
+		if o := other.DataFields[i]; o.Tag != f.Tag || o.Ind1 != f.Ind1 || o.Ind2 != f.Ind2 {
+			return false
+		}
+		// SubFields equal?
+		if len(f.SubFields) != len(other.DataFields[i].SubFields) {
+			return false
+		}
+
+		sort.Sort(f.SubFields)
+		sort.Sort(other.DataFields[i].SubFields)
+
+		for j, s := range f.SubFields {
+			if other.DataFields[i].SubFields[j] != s {
+				return false
+			}
+		}
+	}
+
+	// All fields equal
 	return true
 }
 

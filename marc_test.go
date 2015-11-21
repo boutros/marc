@@ -65,6 +65,99 @@ func TestRecordEq(t *testing.T) {
 			</record>`,
 			false,
 		},
+		{
+			`<record>
+				<datafield tag="082" ind1="3" ind2=" ">
+					<subfield code="a">242</subfield>
+				</datafield>
+			</record>`,
+			`<record>
+				<datafield tag="082" ind1="3" ind2=" ">
+					<subfield code="a">242</subfield>
+				</datafield>
+			</record>`,
+			true,
+		},
+		{
+			`<record>
+				<datafield tag="082" ind1="3" ind2=" ">
+					<subfield code="a">242</subfield>
+				</datafield>
+			</record>`,
+			`<record>
+				<datafield tag="082" ind2=" " ind1="3">
+					<subfield code="a">242</subfield>
+				</datafield>
+			</record>`,
+			true,
+		},
+		{
+			`<record>
+				<datafield tag="082" ind1="3" ind2=" ">
+					<subfield code="a">242</subfield>
+				</datafield>
+			</record>`,
+			`<record>
+				<datafield tag="082" ind1="3" ind2=" ">
+					<subfield code="a">243</subfield>
+				</datafield>
+			</record>`,
+			false,
+		},
+		{
+			`<record>
+				<datafield tag="655" ind1=" " ind2=" ">
+					<subfield code="a">Andaktsbøker</subfield>
+					<subfield code="3">10008700</subfield>
+				</datafield>
+			</record>`,
+			`<record>
+				<datafield tag="655" ind1=" " ind2=" ">
+					<subfield code="3">10008700</subfield>
+					<subfield code="a">Andaktsbøker</subfield>
+				</datafield>
+			</record>`,
+			true,
+		},
+		{
+			`<record>
+				<datafield tag="655" ind1=" " ind2=" ">
+					<subfield code="a">Andaktsbøker</subfield>
+					<subfield code="3">10008700</subfield>
+				</datafield>
+			</record>`,
+			`<record>
+				<datafield tag="655" ind1=" " ind2=" ">
+					<subfield code="a">Andaktsbøker</subfield>
+				</datafield>
+			</record>`,
+			false,
+		},
+		{
+			`<record>
+				<datafield tag="260" ind1=" " ind2=" ">
+					<subfield code="a">Oslo</subfield>
+					<subfield code="c">1968</subfield>
+					<subfield code="b">Aschehoug</subfield>
+				</datafield>
+				<datafield tag="300" ind1=" " ind2=" ">
+					<subfield code="a">97 s.</subfield>
+					<subfield code="b">ill.</subfield>
+				</datafield>
+			</record>`,
+			`<record>
+				<datafield tag="300" ind1=" " ind2=" ">
+					<subfield code="b">ill.</subfield>
+					<subfield code="a">97 s.</subfield>
+				</datafield>
+				<datafield tag="260" ind1=" " ind2=" ">
+					<subfield code="b">Aschehoug</subfield>
+					<subfield code="a">Oslo</subfield>
+					<subfield code="c">1968</subfield>
+				</datafield>
+			</record>`,
+			true,
+		},
 	}
 
 	for _, test := range tests {
