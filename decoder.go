@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/xml"
+	"errors"
+	"fmt"
 	"io"
+	"strconv"
 	"unicode/utf8"
 )
 
@@ -64,7 +67,7 @@ func NewDecoder(r io.Reader, f Format) *Decoder {
 	case MARCXML:
 		return &Decoder{xmlDec: xml.NewDecoder(r), f: f}
 	default:
-		panic("NewDecoder: TODO")
+		return &Decoder{r: bufio.NewReader(r), f: f}
 	}
 }
 
@@ -103,7 +106,7 @@ func (d *Decoder) Decode() (Record, error) {
 		}
 		return r, io.EOF
 	default:
-		panic("TODO")
+		return d.decodeMARC()
 	}
 
 }
@@ -214,6 +217,82 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 			f.SubFields = append(f.SubFields, sf)
 		}
 		r.DataFields = append(r.DataFields, f)
+	}
+
+	return r, nil
+}
+
+func (d *Decoder) decodeMARC() (Record, error) {
+	const recordTerminator = ''
+	var r Record
+
+	b, err := d.r.ReadBytes(recordTerminator)
+	if err != nil && len(b) == 0 {
+		return r, err
+	}
+	if len(b) < 24 {
+		return r, io.EOF
+	}
+
+	r.Leader = string(b[0:24])
+	size, err := strconv.Atoi(r.Leader[0:5])
+	if err != nil {
+		return r, errors.New("leader pos 0:5 not an integer")
+	}
+	if size != len(b) {
+		return r, fmt.Errorf("leader reports size %d; actual size is %d\n", size, len(b))
+	}
+
+	// leader+directory length
+	ll, err := strconv.Atoi(r.Leader[12:17])
+	if err != nil {
+		return r, errors.New("leader pos 12:17 not an integer")
+	}
+	p := 24 // position
+	for p < ll-1 {
+		if bytes.HasPrefix(b[p:], []byte("00")) {
+			// control field
+			fl, err := strconv.Atoi(string(b[p+3 : p+7]))
+			if err != nil {
+				return r, errors.New("directory item field length not an integer")
+			}
+			fs, err := strconv.Atoi(string(b[p+7 : p+12]))
+			if err != nil {
+				return r, errors.New("directory item field starting position not an integer")
+			}
+			if ll+fs+fl-1 > size {
+				return r, errors.New("directory item starting position/length out of bounds")
+			}
+			f := CField{Tag: string(b[p : p+3]), Value: string(b[ll+fs : ll+fs+fl-1])}
+			r.CtrlFields = append(r.CtrlFields, f)
+		} else {
+			// data field
+			fl, err := strconv.Atoi(string(b[p+3 : p+7]))
+			if err != nil {
+				return r, errors.New("directory item field length not an integer")
+			}
+			fs, err := strconv.Atoi(string(b[p+7 : p+12]))
+			if err != nil {
+				return r, errors.New("directory item field starting position not an integer")
+			}
+			if ll+fs+fl-1 > size {
+				return r, errors.New("directory item starting position/length out of bounds")
+			}
+			f := DField{
+				Tag:  string(b[p : p+3]),
+				Ind1: string(b[ll+fs : ll+fs+1]),
+				Ind2: string(b[ll+fs+1 : ll+fs+2]),
+			}
+			// parse subfields
+			for _, s := range bytes.Split(b[ll+fs+2:ll+fs+fl-1], []byte("")) {
+				if len(s) > 1 {
+					f.SubFields = append(f.SubFields,
+						SubField{Code: string(s[:1]), Value: string(s[1:])})
+				}
+			}
+			r.DataFields = append(r.DataFields, f)
+		}
+		p += 12
 	}
 
 	return r, nil
