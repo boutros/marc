@@ -181,7 +181,7 @@ func TestRecordEq(t *testing.T) {
 func TestDump(t *testing.T) {
 	var b bytes.Buffer
 
-	dec := NewDecoder(bytes.NewBufferString(lmarc1), LineMARC)
+	dec := NewDecoder(bytes.NewBufferString(sampleLineMARC), LineMARC)
 	r, err := dec.Decode()
 	if err != nil {
 		t.Fatal(err)

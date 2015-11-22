@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-var marc1 = `01142cam  2200301 a 4500001001300000003000400013005001700017008004100034010001700075020002500092040001800117042000900135050002600144082001600170100003200186245008600218250001200304260005200316300004900368500004000417520022800457650003300685650003300718650002400751650002100775650002300796700002100819   92005291 DLC19930521155141.9920219s1993    caua   j      000 0 eng    a   92005291   a0152038655 :c$15.95  aDLCcDLCdDLC  alcac00aPS3537.A618bA88 199300a811/.522201 aSandburg, Carl,d1878-1967.10aArithmetic /cCarl Sandburg ; illustrated as an anamorphic adventure by Ted Rand.  a1st ed.  aSan Diego :bHarcourt Brace Jovanovich,cc1993.  a1 v. (unpaged) :bill. (some col.) ;c26 cm.  aOne Mylar sheet included in pocket.  aA poem about numbers and their characteristics. Features anamorphic, or distorted, drawings which can be restored to normal by viewing from a particular angle or by viewing the image's reflection in the provided Mylar cone. 0aArithmeticxJuvenile poetry. 0aChildren's poetry, American. 1aArithmeticxPoetry. 1aAmerican poetry. 1aVisual perception.1 aRand, Ted,eill.`
+var sampleMARC = `01142cam  2200301 a 4500001001300000003000400013005001700017008004100034010001700075020002500092040001800117042000900135050002600144082001600170100003200186245008600218250001200304260005200316300004900368500004000417520022800457650003300685650003300718650002400751650002100775650002300796700002100819   92005291 DLC19930521155141.9920219s1993    caua   j      000 0 eng    a   92005291   a0152038655 :c$15.95  aDLCcDLCdDLC  alcac00aPS3537.A618bA88 199300a811/.522201 aSandburg, Carl,d1878-1967.10aArithmetic /cCarl Sandburg ; illustrated as an anamorphic adventure by Ted Rand.  a1st ed.  aSan Diego :bHarcourt Brace Jovanovich,cc1993.  a1 v. (unpaged) :bill. (some col.) ;c26 cm.  aOne Mylar sheet included in pocket.  aA poem about numbers and their characteristics. Features anamorphic, or distorted, drawings which can be restored to normal by viewing from a particular angle or by viewing the image's reflection in the provided Mylar cone. 0aArithmeticxJuvenile poetry. 0aChildren's poetry, American. 1aArithmeticxPoetry. 1aAmerican poetry. 1aVisual perception.1 aRand, Ted,eill.`
 
-var lmarc1 = `*000     c
+var sampleLineMARC = `*000     c
 *0010010463
 *008871001                a          0 nob r
 *015  $a29$bBibliofilID
@@ -26,7 +26,7 @@ var lmarc1 = `*000     c
 *850  $aDEICHM$sn
 ^`
 
-var marcxml1 = `
+var sampleMARCXML = `
 <?xml version="1.0" encoding="UTF-8"?>
 <collection xmlns="http://www.loc.gov/MARC21/slim">
   <record>
@@ -109,34 +109,12 @@ var marcxml1 = `
   </record>
 </collection>`
 
-func TestDecodeMARC(t *testing.T) {
-	dec := NewDecoder(bytes.NewBufferString(marc1), MARC)
+func TestDecodeMARC(t *testing.T)     { testDecodeRecord(t, sampleMARC, MARC) }
+func TestDecodeLineMARC(t *testing.T) { testDecodeRecord(t, sampleLineMARC, LineMARC) }
+func TestDecodeMARCXML(t *testing.T)  { testDecodeRecord(t, sampleMARCXML, MARCXML) }
 
-	r, err := dec.DecodeAll()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(r) != 1 {
-		t.Errorf("expected 1 record; got %d", len(r))
-	}
-}
-
-func TestDecodeLineMARC(t *testing.T) {
-	dec := NewDecoder(bytes.NewBufferString(lmarc1), LineMARC)
-
-	r, err := dec.DecodeAll()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(r) != 1 {
-		t.Fatalf("expected 1 record; got %d", len(r))
-	}
-}
-
-func TestDecodeMARCXML(t *testing.T) {
-	dec := NewDecoder(bytes.NewBufferString(marcxml1), MARCXML)
+func testDecodeRecord(t *testing.T, input string, f Format) {
+	dec := NewDecoder(bytes.NewBufferString(input), f)
 
 	r, err := dec.DecodeAll()
 	if err != nil {
@@ -150,8 +128,8 @@ func TestDecodeMARCXML(t *testing.T) {
 
 func BenchmarkDecodeBaseline(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		r := bufio.NewReader(bytes.NewBufferString(lmarc1))
-		b.SetBytes(int64(len(lmarc1)))
+		r := bufio.NewReader(bytes.NewBufferString(sampleLineMARC))
+		b.SetBytes(int64(len(sampleLineMARC)))
 		_, err := r.ReadBytes(0x5E)
 		if err != nil {
 			b.Fatal(err)
@@ -159,32 +137,14 @@ func BenchmarkDecodeBaseline(b *testing.B) {
 	}
 }
 
-func BenchmarkDecodeMARC(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		b.SetBytes(int64(len(marc1)))
-		dec := NewDecoder(bytes.NewBufferString(marc1), MARC)
-		_, err := dec.Decode()
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
+func BenchmarkDecodeMARC(b *testing.B)     { benchmarkDecode(b, sampleMARC, MARC) }
+func BenchmarkDecodeLineMARC(b *testing.B) { benchmarkDecode(b, sampleLineMARC, LineMARC) }
+func BenchmarkDecodeMARCXML(b *testing.B)  { benchmarkDecode(b, sampleMARCXML, MARCXML) }
 
-func BenchmarkDecodeLineMARC(b *testing.B) {
+func benchmarkDecode(b *testing.B, sample string, f Format) {
 	for n := 0; n < b.N; n++ {
-		b.SetBytes(int64(len(lmarc1)))
-		dec := NewDecoder(bytes.NewBufferString(lmarc1), LineMARC)
-		_, err := dec.Decode()
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkDecodeMARCXML(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		b.SetBytes(int64(len(marcxml1)))
-		dec := NewDecoder(bytes.NewBufferString(marcxml1), MARCXML)
+		b.SetBytes(int64(len(sample)))
+		dec := NewDecoder(bytes.NewBufferString(sample), f)
 		_, err := dec.Decode()
 		if err != nil {
 			b.Fatal(err)
