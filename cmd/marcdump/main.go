@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/boutros/marc"
 )
@@ -24,14 +23,14 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	if len(os.Args) < 2 || strings.HasPrefix(os.Args[len(os.Args)-1], "-") {
+	flag.Parse()
+
+	if len(flag.Args()) == 0 {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	flag.Parse()
-
-	f, err := os.Open(os.Args[len(os.Args)-1])
+	f, err := os.Open(flag.Args()[0])
 	if err != nil {
 		log.Fatal(err)
 	}
