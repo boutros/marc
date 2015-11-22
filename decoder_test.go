@@ -3,6 +3,7 @@ package marc
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"testing"
 )
 
@@ -141,6 +142,41 @@ func testDecodeRecord(t *testing.T, input string, f Format) {
 
 	if len(r) != 1 {
 		t.Fatalf("expected 1 record; got %d", len(r))
+	}
+}
+
+func TestDecodeEncodeRoundtrip(t *testing.T) {
+	tests := []struct{ inF, outF Format }{
+		{MARC, MARC},
+		//{MARC, LineMARC},
+		//{LineMARC, LineMARC},
+	}
+
+	// buffer used for decoding and encoding
+	b := bytes.NewBufferString(sampleMARC)
+
+	for _, test := range tests {
+		dec := NewDecoder(b, test.inF)
+		r, err := dec.Decode()
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.Reset()
+		enc := NewEncoder(b, test.outF)
+		err = enc.Encode(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		enc.w.Flush()
+		fmt.Println(b.String())
+		dec = NewDecoder(b, test.outF)
+		r2, err := dec.Decode()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !r.Eq(r2) {
+			t.Fatalf("decode %s -> encode %s roundtrip failed", test.inF, test.outF)
+		}
 	}
 }
 
