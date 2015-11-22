@@ -22,6 +22,50 @@ const (
 	MARCXML                // MarcXchange (ISO25577)
 )
 
+// String returns a string representation of a Format.
+func (f Format) String() string {
+	switch f {
+	case unknown:
+		return "Unknown MARC format"
+	case MARC:
+		return "Standard MARC (ISO2709)"
+	case LineMARC:
+		return "Line-MARC"
+	case MARCXML:
+		return "MarcXchange (ISO25577)"
+	default:
+		panic("unreachable")
+	}
+}
+
+// DetectFormat tries to detect the MARC encoding of the given byte slice. It
+// detects one of LineMARC/MARC/MARCXML, or otherwise unknown.
+func DetectFormat(data []byte) Format {
+	// Find the first non-whitespace byte
+	i := 0
+	for ; i < len(data) && isWS(data[i]); i++ {
+	}
+	switch data[i] {
+	case '<':
+		return MARCXML
+	case '*': // TODO also '^' ?
+		return LineMARC
+	default:
+		if data[i] >= '0' && data[i] <= '9' {
+			return MARC
+		}
+		return unknown
+	}
+}
+
+func isWS(b byte) bool {
+	switch b {
+	case '\t', '\n', '\x0c', '\r', ' ':
+		return true
+	}
+	return false
+}
+
 type Encoder struct {
 	w      *bufio.Writer
 	xmlEnc *xml.Encoder

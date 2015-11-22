@@ -14,7 +14,7 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("marccheck: ")
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: marcheck <marcdatabase>")
+		fmt.Fprintf(os.Stderr, "Usage: marcheck <marcdatabase>\n")
 		os.Exit(1)
 	}
 
@@ -28,7 +28,27 @@ func main() {
 	}
 	size := stats.Size()
 
-	dec := marc.NewDecoder(f, marc.LineMARC)
+	// Detect format
+	sniff := make([]byte, 64)
+	_, err = f.Read(sniff)
+	if err != nil {
+		log.Fatal(err)
+	}
+	format := marc.DetectFormat(sniff)
+	switch format {
+	case marc.MARC, marc.LineMARC, marc.MARCXML:
+		break
+	default:
+		log.Fatal("Unknown MARC format")
+	}
+
+	// rewind reader
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dec := marc.NewDecoder(f, format)
 	c := 0
 	start := time.Now()
 

@@ -109,6 +109,24 @@ var sampleMARCXML = `
   </record>
 </collection>`
 
+func TestDetectFormat(t *testing.T) {
+	tests := []struct {
+		input string
+		want  Format
+	}{
+		{sampleMARC, MARC},
+		{sampleMARCXML, MARCXML},
+		{sampleLineMARC, LineMARC},
+		{"abc", unknown},
+	}
+
+	for _, test := range tests {
+		if f := DetectFormat([]byte(test.input)); f != test.want {
+			t.Errorf("DetectFormat => %v; want %v", f, test.want)
+		}
+	}
+}
+
 func TestDecodeMARC(t *testing.T)     { testDecodeRecord(t, sampleMARC, MARC) }
 func TestDecodeLineMARC(t *testing.T) { testDecodeRecord(t, sampleLineMARC, LineMARC) }
 func TestDecodeMARCXML(t *testing.T)  { testDecodeRecord(t, sampleMARCXML, MARCXML) }

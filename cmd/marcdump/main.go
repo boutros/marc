@@ -35,7 +35,28 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dec := marc.NewDecoder(f, marc.LineMARC)
+
+	// Detect format
+	sniff := make([]byte, 64)
+	_, err = f.Read(sniff)
+	if err != nil {
+		log.Fatal(err)
+	}
+	format := marc.DetectFormat(sniff)
+	switch format {
+	case marc.MARC, marc.LineMARC, marc.MARCXML:
+		break
+	default:
+		log.Fatal("Unknown MARC format")
+	}
+
+	// rewind reader
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dec := marc.NewDecoder(f, format)
 	for r, err := dec.Decode(); err != io.EOF; r, err = dec.Decode() {
 		if err != nil {
 			log.Fatal(err)
