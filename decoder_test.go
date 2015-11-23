@@ -3,7 +3,6 @@ package marc
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"testing"
 )
 
@@ -167,8 +166,7 @@ func TestDecodeEncodeRoundtrip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		enc.w.Flush()
-		fmt.Println(b.String())
+		enc.w.Flush() // TODO add Flush() to encoder
 		dec = NewDecoder(b, test.outF)
 		r2, err := dec.Decode()
 		if err != nil {

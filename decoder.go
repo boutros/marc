@@ -79,104 +79,61 @@ func (enc *Encoder) Encode(r Record) error {
 	case LineMARC:
 		panic("Encode LineMARC TODO")
 	case MARC:
-		// TODO factor error handling of writes
-		// ala https://blog.golang.org/errors-are-values
-
-		const fs = '' // field separator
-		const ss = '' // subfield separator
-		const rt = '' // record terminator
+		const (
+			fs = '' // field separator
+			ss = '' // subfield separator
+			rt = '' // record terminator
+		)
 		var (
+			err  error        // acumulated buffer write errors
 			head bytes.Buffer // leader + directory
 			body bytes.Buffer // control fields + data fields
+			p    = 0          // position in body
 		)
-		p := 0 // position in body
+		var writeByte = func(w *bytes.Buffer, b byte) int {
+			if err != nil {
+				return 0
+			}
+			err = w.WriteByte(b)
+			return 1
+		}
+		var writeString = func(w *bytes.Buffer, s string) int {
+			if err != nil {
+				return 0
+			}
+			var n int
+			n, err = w.WriteString(s)
+			return n
+		}
+
 		for _, f := range r.CtrlFields {
 			start := p
-			n, err := body.WriteString(f.Value)
-			if err != nil {
-				return err
-			}
-			p += n
-			n, err = head.WriteString(f.Tag) // TODO make sure Tag is 3 chars
-			if err != nil {
-				return err
-			}
-			err = body.WriteByte(fs)
-			if err != nil {
-				return err
-			}
-			p++
-			n, err = head.WriteString(fmt.Sprintf("%04d", len(f.Value)+1))
-			if err != nil {
-				return err
-			}
-			n, err = head.WriteString(fmt.Sprintf("%05d", start))
-			if err != nil {
-				return err
-			}
+			p += writeString(&body, f.Value)
+			p += writeByte(&body, fs)
+
+			writeString(&head, f.Tag) // TODO make sure Tag is 3 chars
+			writeString(&head, fmt.Sprintf("%04d", len(f.Value)+1))
+			writeString(&head, fmt.Sprintf("%05d", start))
 		}
 		for _, f := range r.DataFields {
 			start := p
-			n, err := body.WriteString(f.Ind1) // TODO make sure Ind1 is 1 char
-			if err != nil {
-				return err
-			}
-			p += n
-			n, err = body.WriteString(f.Ind2) // TODO make sure Ind2 is 1 char
-			if err != nil {
-				return err
-			}
-			p += n
-			n, err = head.WriteString(f.Tag) // TODO make sure Tag is 3 chars
-			if err != nil {
-				return err
-			}
-			err = body.WriteByte(ss)
-			if err != nil {
-				return err
-			}
-			p++
+			p += writeString(&body, f.Ind1) // TODO make sure Ind1 is 1 char
+			p += writeString(&body, f.Ind2) // TODO make sure Ind2 is 1 char
+			p += writeByte(&body, ss)
+			writeString(&head, f.Tag) // TODO make sure Tag is 3 chars
 			for i, sf := range f.SubFields {
-				n, err := body.WriteString(sf.Code) // TODO make sure Code is 1 char
-				if err != nil {
-					return err
-				}
-				p += n
-				n, err = body.WriteString(sf.Value)
-				if err != nil {
-					return err
-				}
-				p += n
+				p += writeString(&body, sf.Code) // TODO make sure Code is 1 char
+				p += writeString(&body, sf.Value)
 				if i < len(f.SubFields)-1 {
-					err = body.WriteByte(ss)
-					if err != nil {
-						return err
-					}
-					p++
+					p += writeByte(&body, ss)
 				}
 			}
-			err = body.WriteByte(fs)
-			if err != nil {
-				return err
-			}
-			p++
-			n, err = head.WriteString(fmt.Sprintf("%04d", p-start))
-			if err != nil {
-				return err
-			}
-			n, err = head.WriteString(fmt.Sprintf("%05d", start))
-			if err != nil {
-				return err
-			}
+			p += writeByte(&body, fs)
+			writeString(&head, fmt.Sprintf("%04d", p-start))
+			writeString(&head, fmt.Sprintf("%05d", start))
 		}
-		err := head.WriteByte(fs)
-		if err != nil {
-			return err
-		}
-		err = body.WriteByte(rt)
-		if err != nil {
-			return err
-		}
+		writeByte(&head, fs)
+		writeByte(&body, rt)
 		// We copy the computed size, even if allready present in leader
 		size := 24 + len(head.Bytes()) + len(body.Bytes())
 		//fmt.Printf("leader: %s computed: %d\n", r.Leader[0:5], size)
