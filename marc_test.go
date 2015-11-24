@@ -24,7 +24,7 @@ func TestRecordEq(t *testing.T) {
 		{
 			`<record><leader>    c                   </leader></record>`,
 			`<record><leader>    d                   </leader></record>`,
-			false,
+			true,
 		},
 		{
 			`<record>
@@ -187,7 +187,7 @@ func TestDump(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := `000      c
+	want := `     c   a22        4500
 001 0010463
 008 871001                a          0 nob r
 015 __ |a 29 |b BibliofilID

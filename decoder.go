@@ -11,6 +11,11 @@ import (
 	"unicode/utf8"
 )
 
+// leaderTemplate is used to fill in default values in leader,
+// unless defined in record. (Usually applies to LineMARC,
+// which omits the leader.)
+var leaderTemplate = []byte("     c   a22        4500")
+
 // Format represents a MARC serialization format
 type Format int
 
@@ -72,12 +77,61 @@ type Encoder struct {
 	f      Format
 }
 
-func (enc *Encoder) Encode(r Record) error {
+func (enc *Encoder) Encode(r Record) (err error) {
+	// TODO revise this writer solution
+	type writer interface {
+		io.Writer
+		io.ByteWriter
+	}
+	var writeByte = func(w writer, b byte) int {
+		if err != nil {
+			return 0
+		}
+		err = w.WriteByte(b)
+		return 1
+	}
+	var writeString = func(w writer, s string) int {
+		if err != nil {
+			return 0
+		}
+		var n int
+		n, err = io.WriteString(w, s)
+		return n
+	}
+	var oneChar = func(s string) byte {
+		if len(s) == 0 {
+			return ' '
+		}
+		return s[0]
+	}
+
 	switch enc.f {
 	case MARCXML:
 		return enc.xmlEnc.Encode(r)
 	case LineMARC:
-		panic("Encode LineMARC TODO")
+		writeString(enc.w, "*000")
+		writeString(enc.w, r.Leader)
+		writeByte(enc.w, '\n')
+		for _, f := range r.CtrlFields {
+			writeByte(enc.w, '*')
+			writeString(enc.w, f.Tag)
+			writeString(enc.w, f.Value)
+			writeByte(enc.w, '\n')
+		}
+		for _, f := range r.DataFields {
+			writeByte(enc.w, '*')
+			writeString(enc.w, f.Tag)
+			writeByte(enc.w, oneChar(f.Ind1))
+			writeByte(enc.w, oneChar(f.Ind2))
+			for _, s := range f.SubFields {
+				writeByte(enc.w, '$')
+				writeByte(enc.w, oneChar(s.Code))
+				writeString(enc.w, s.Value)
+			}
+			writeByte(enc.w, '\n')
+		}
+		writeString(enc.w, "^\n")
+		return err
 	case MARC:
 		const (
 			fs = '' // field separator
@@ -85,27 +139,10 @@ func (enc *Encoder) Encode(r Record) error {
 			rt = '' // record terminator
 		)
 		var (
-			err  error        // acumulated buffer write errors
 			head bytes.Buffer // leader + directory
 			body bytes.Buffer // control fields + data fields
 			p    = 0          // position in body
 		)
-		var writeByte = func(w *bytes.Buffer, b byte) int {
-			if err != nil {
-				return 0
-			}
-			err = w.WriteByte(b)
-			return 1
-		}
-		var writeString = func(w *bytes.Buffer, s string) int {
-			if err != nil {
-				return 0
-			}
-			var n int
-			n, err = w.WriteString(s)
-			return n
-		}
-
 		for _, f := range r.CtrlFields {
 			start := p
 			p += writeString(&body, f.Value)
@@ -156,6 +193,13 @@ func (enc *Encoder) Encode(r Record) error {
 	default:
 		panic("Encode Unknown")
 	}
+}
+
+func (enc *Encoder) Flush() error {
+	if enc.w == nil {
+		return nil
+	}
+	return enc.w.Flush()
 }
 
 func NewEncoder(w io.Writer, f Format) *Encoder {
@@ -287,6 +331,8 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 		d.pos++
 	}
 
+	leader := make([]byte, 24)
+
 	for d.next() == '*' {
 		s := d.pos // keep track of start of tag
 		if bytes.HasPrefix(d.input[d.pos:], []byte("00")) {
@@ -297,13 +343,18 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 			// Parse controlfield
 
 			f := CField{Tag: string(d.input[s:d.pos])}
-
 			if d.consumeUntil('\n') {
-				f.Value = string(d.input[s+3 : d.pos])
+				if d.input[s+2] == '0' {
+					// controlfield 000 = leader
+					copy(leader, d.input[s+3:d.pos])
+				} else {
+					f.Value = string(d.input[s+3 : d.pos])
+					r.CtrlFields = append(r.CtrlFields, f)
+				}
 				// consume and ignore \n
 				d.pos++
 			}
-			r.CtrlFields = append(r.CtrlFields, f)
+
 			continue
 		}
 		// Parse datafield
@@ -335,6 +386,14 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 		}
 		r.DataFields = append(r.DataFields, f)
 	}
+
+	// replace spaces with chars from leader template
+	for i, c := range leader {
+		if c == '\x00' {
+			leader[i] = leaderTemplate[i]
+		}
+	}
+	r.Leader = string(leader)
 
 	return r, nil
 }
