@@ -325,6 +325,25 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 	if d.input, err = d.r.ReadBytes(0x5E); err != nil {
 		return r, err
 	}
+	// Some records might include the ^ characters, notably in the leader,
+	// so we check to make sure we reached a record terminator
+	// TODO flag the record for replacement of ^ with space in leader and control fields
+	for d.input[len(d.input)-2] != '\n' {
+		// Most likely it's a leader or control field 008 where spaces
+		// are indicated with ^, so we read to the end of the line.
+		b, err := d.r.ReadBytes('\n')
+		if err != nil {
+			return r, err
+		}
+		d.input = append(d.input, b...)
+		// Read to next terminator (hopefully)
+		b, err = d.r.ReadBytes(0x5E)
+		if err != nil {
+			return r, err
+		}
+		d.input = append(d.input, b...)
+	}
+
 	d.pos = 0
 
 	if d.peek() == '\n' {
