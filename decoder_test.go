@@ -222,3 +222,35 @@ func benchmarkDecode(b *testing.B, sample string, f Format) {
 		}
 	}
 }
+
+func BenchmarkEncodeBaseline(b *testing.B) {
+	var w bytes.Buffer
+	for n := 0; n < b.N; n++ {
+		b.SetBytes(int64(len(sampleMARC)))
+		_, err := w.WriteString(sampleMARC)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkEncodeMARC(b *testing.B)     { benchmarkEncode(b, sampleMARC, MARC) }
+func BenchmarkEncodeLineMARC(b *testing.B) { benchmarkEncode(b, sampleLineMARC, LineMARC) }
+func BenchmarkEncodeMARCXML(b *testing.B)  { benchmarkEncode(b, sampleMARCXML, MARCXML) }
+
+func benchmarkEncode(b *testing.B, sample string, f Format) {
+	var w bytes.Buffer
+	dec := NewDecoder(bytes.NewBufferString(sample), f)
+	rec, err := dec.Decode()
+	if err != nil {
+		b.Fatal(err)
+	}
+	for n := 0; n < b.N; n++ {
+		b.SetBytes(int64(len(sample)))
+		enc := NewEncoder(&w, f)
+		err := enc.Encode(rec)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
