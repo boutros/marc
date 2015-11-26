@@ -1,0 +1,5 @@
+## marccheck
+
+```
+Usage: marcheck <marcdatabase>
+```
