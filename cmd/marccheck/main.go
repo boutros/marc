@@ -14,7 +14,7 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("marccheck: ")
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: marcheck <marcdatabase>\n")
+		fmt.Fprintf(os.Stderr, "Usage: marccheck <marcdatabase>\n")
 		os.Exit(1)
 	}
 
