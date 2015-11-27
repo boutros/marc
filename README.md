@@ -1,23 +1,32 @@
 # marc
 
-This package provides encoders and decoders for MARC bibliographic records. It can handle standard binary MARC (MARC21 ISO2709), MARCXML (MarcXchange ISO25577) and Line-MARC (not a standard, but commonly used in Norway int the semi-standard NORMARC).
+This package provides encoders and decoders for MARC bibliographic records. It can handle standard binary MARC (MARC21 ISO2709), MARCXML (MarcXchange ISO25577) and Line-MARC (not a standard, but commonly used in Norway in the semi-standard NORMARC).
 
 ## Usage 
 
+The package implements streaming decoding and encoding of MARC records, enabeling you to parse huge datasets with minimum memory footprint. Simply create a decoder over a ìo.Reader`, and call `Decode()` until the end of stream:
+
 ```
-dec := marc.NewDecoder("mydb.mrc", marc.LineMARC)
+marcFile, err := os.Open("mydb.mrc")
+if err != nil {
+	log.Fatal(err)
+}
+
+dec := marc.NewDecoder(marcFile, marc.LineMARC)
 for rec, err := dec.Decode(); err != io.EOF; rec, err = dec.Decode() {
 	doSomethingWith(rec)
 }
 ```
 
+See the [marc2marc](cmd/marc2marc) utility for a more complete example.
+
 ## Command line utilities
 
-The repo includes 3 utilities which can be seen as example of how to use the package, or maybe usefull in their on right:
+The repo includes 3 utilities which can be seen as example of how to use the package, or maybe usefull in their own right:
 
-* [marccheck](cmd/marccheck/README.md) - Parse MARC database to check for errors.
-* [marcdump](cmd/marcdump/README.md) - Pretty print MARC database to terminal.
-* [marc2marc](cmd/marc2marc/README.md) - Convert between different MARC serializations.
+* [marccheck](cmd/marccheck) - Parse MARC database to check for errors.
+* [marcdump](cmd/marcdump) - Pretty print MARC database to terminal.
+* [marc2marc](cmd/marc2marc) - Convert between different MARC serializations.
 
 ## Performance
 

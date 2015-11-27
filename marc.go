@@ -1,3 +1,4 @@
+// Package marc provides encoders and decoders for MARC records.
 package marc
 
 import (
@@ -20,11 +21,13 @@ type Record struct {
 	DataFields DFields  `xml:"datafield"`
 }
 
+// CField represents a control field in a MARC record.
 type CField struct {
 	Tag   string `xml:"tag,attr"`  // 3 chars
 	Value string `xml:",chardata"` // if Tag == "000"; 40 chars
 }
 
+// DField represents a data field in a MARC record.
 type DField struct {
 	Tag       string    `xml:"tag,attr"`  // 3 chars
 	Ind1      string    `xml:"ind1,attr"` // 1 char
@@ -32,6 +35,7 @@ type DField struct {
 	SubFields SubFields `xml:"subfield"`
 }
 
+// SubField represents a sub field in a data field.
 type SubField struct {
 	Code  string `xml:"code,attr"` // 1 char
 	Value string `xml:",chardata"`
