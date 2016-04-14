@@ -103,8 +103,8 @@ func main() {
 	if *tags != "" {
 		filterTags = strings.Split(*tags, ",")
 		for _, t := range filterTags {
-			if len(t) != 4 {
-				log.Fatalf("wrong tag filter format: %q (should be a three-digit number plus one character, ex. \"100e\")", t)
+			if len(t) < 4 {
+				log.Fatalf("wrong tag filter format: %q (should be a three-digit number plus one or more subfieldcharacters, ex. \"100e,655ax\")", t)
 			}
 		}
 	}
@@ -143,12 +143,30 @@ func filterCounts(filterTags []string, filterStats map[string]tagStats, rec marc
 	for _, df := range rec.DataFields {
 		for _, ft := range filterTags {
 			if df.Tag == ft[0:3] {
-				for _, sf := range df.SubFields {
-					if sf.Code == ft[3:] {
+				if len(ft[3:]) == 1 {
+					// one subfield
+					for _, sf := range df.SubFields {
+						if sf.Code == ft[3:] {
+							if _, ok := filterStats[ft]; !ok {
+								filterStats[ft] = make(tagStats)
+							}
+							filterStats[ft][sf.Value] = filterStats[ft][sf.Value] + 1
+						}
+					}
+				} else {
+					// multiple subfields
+					res := []string{}
+					for _, subfieldCode := range ft[3:] {
+						for _, sf := range df.SubFields {
+							if sf.Code == string(subfieldCode) {
+								res = append(res, sf.Value)
+							}
+						}
 						if _, ok := filterStats[ft]; !ok {
 							filterStats[ft] = make(tagStats)
 						}
-						filterStats[ft][sf.Value] = filterStats[ft][sf.Value] + 1
+						stat := strings.Join(res, " - ")
+						filterStats[ft][stat] = filterStats[ft][stat] + 1
 					}
 				}
 			}
