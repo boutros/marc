@@ -165,7 +165,7 @@ func filterCounts(filterTags []string, filterStats map[string]tagStats, rec marc
 						if _, ok := filterStats[ft]; !ok {
 							filterStats[ft] = make(tagStats)
 						}
-						stat := strings.Join(res, " - ")
+						stat := strings.Join(res, " > ")
 						filterStats[ft][stat] = filterStats[ft][stat] + 1
 					}
 				}
