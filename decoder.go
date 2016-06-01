@@ -184,7 +184,15 @@ func (enc *Encoder) Encode(r Record) (err error) {
 		if err != nil {
 			return err
 		}
-		_, err = enc.w.WriteString(r.Leader[5:])
+		_, err = enc.w.WriteString(r.Leader[5:12])
+		if err != nil {
+			return err
+		}
+		_, err = enc.w.WriteString(fmt.Sprintf("%05d", 24+len(head.Bytes())))
+		if err != nil {
+			return err
+		}
+		_, err = enc.w.WriteString(r.Leader[17:])
 		if err != nil {
 			return err
 		}
