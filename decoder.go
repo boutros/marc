@@ -445,7 +445,7 @@ func (d *Decoder) decodeMARC() (Record, error) {
 	// leader+directory length
 	ll, err := strconv.Atoi(r.Leader[12:17])
 	if err != nil {
-		return r, errors.New("leader pos 12:17 not an integer")
+		return r, fmt.Errorf("leader pos 12:17 not an integer: %q", r.Leader[12:17])
 	}
 	p := 24 // position
 	for p < ll-1 {
