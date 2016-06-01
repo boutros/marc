@@ -15,7 +15,7 @@ func main() {
 	log.SetPrefix("marcdump: ")
 	var (
 		useColors = flag.Bool("color", true, "use colored terminal output")
-		filter    = flag.String("filter", "", "only print specified fields, ex.: 100b,245a")
+		//filter    = flag.String("filter", "", "only print specified fields, ex.: 100b,245a")
 	)
 
 	flag.Usage = func() {
@@ -63,5 +63,4 @@ func main() {
 		r.DumpTo(os.Stdout, *useColors)
 	}
 
-	log.Println(*useColors, *filter)
 }
