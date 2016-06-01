@@ -154,8 +154,8 @@ func (enc *Encoder) Encode(r Record) (err error) {
 		}
 		for _, f := range r.DataFields {
 			start := p
-			p += writeString(&body, f.Ind1) // TODO make sure Ind1 is 1 char
-			p += writeString(&body, f.Ind2) // TODO make sure Ind2 is 1 char
+			p += writeByte(&body, oneChar(f.Ind1))
+			p += writeByte(&body, oneChar(f.Ind2))
 			p += writeByte(&body, ss)
 			writeString(&head, f.Tag) // TODO make sure Tag is 3 chars
 			for i, sf := range f.SubFields {
