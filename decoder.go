@@ -173,6 +173,10 @@ func (enc *Encoder) Encode(r Record) (err error) {
 		writeByte(&body, rt)
 		// We copy the computed size, even if allready present in leader
 		size := 24 + len(head.Bytes()) + len(body.Bytes())
+
+		if size > 99999 {
+			return fmt.Errorf("record is bigger than max supported size in binary MARC (99999): %d", size)
+		}
 		//fmt.Printf("leader: %s computed: %d\n", r.Leader[0:5], size)
 		//fmt.Println(head.String())
 		//fmt.Println(body.String())
