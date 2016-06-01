@@ -2,9 +2,9 @@
 
 This package provides encoders and decoders for MARC bibliographic records. It can handle standard binary MARC (MARC21 ISO2709), MARCXML (MarcXchange ISO25577) and Line-MARC (not a standard, but commonly used in Norway in the semi-standard NORMARC).
 
-## Usage 
+## Usage
 
-The package implements streaming decoding and encoding of MARC records, enabeling you to parse huge datasets with minimum memory footprint. Simply create a decoder over a ìo.Reader`, and call `Decode()` until the end of stream:
+The package implements streaming decoding and encoding of MARC records, enabeling you to parse huge datasets with minimum memory footprint. Simply create a decoder over an `io.Reader`, and call `Decode()` until the end of stream:
 
 ```
 marcFile, err := os.Open("mydb.mrc")
