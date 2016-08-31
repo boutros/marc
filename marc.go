@@ -106,6 +106,70 @@ func (f SubFields) Less(i, j int) bool {
 	return false
 }
 
+// SetCField sets the given control field, replacing any existing control
+// field with same tag.
+func (r *Record) SetCField(f CField) {
+	for i, f := range r.CtrlFields {
+		if f.Tag == f.Tag {
+			r.CtrlFields[i] = f
+			return
+		}
+	}
+	r.CtrlFields = append(r.CtrlFields, f)
+}
+
+// GetCField returns the control field of the given tag, comma true,
+// or false if it does not exist.
+func (r *Record) GetCField(tag string) (CField, bool) {
+	for _, f := range r.CtrlFields {
+		if f.Tag == tag {
+			return f, true
+		}
+	}
+	return CField{}, false
+}
+
+// GetDFields returns the data fields of the given tag
+func (r *Record) GetDFields(tag string) []DField {
+	res := make([]DField, 0)
+	for _, f := range r.DataFields {
+		if f.Tag == tag {
+			res = append(res, f)
+		}
+	}
+	return res
+}
+
+// AddDField adds the data field to the record.
+func (r *Record) AddDField(f DField) {
+	r.DataFields = append(r.DataFields, f)
+}
+
+func NewDField(tag string) DField {
+	return DField{
+		Tag:  tag,
+		Ind1: " ",
+		Ind2: " ",
+	}
+}
+
+func (f DField) SubField(code string) string {
+	for _, f := range f.SubFields {
+		if f.Code == code {
+			return f.Value
+		}
+	}
+	return ""
+}
+
+func (f DField) AddSubField(code, value string) DField {
+	f.SubFields = append(f.SubFields, SubField{
+		Code:  code,
+		Value: value,
+	})
+	return f
+}
+
 // Eq tests for Record equality.
 func (r *Record) Eq(other *Record) bool {
 

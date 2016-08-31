@@ -3,6 +3,7 @@ package marc
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"testing"
 )
 
