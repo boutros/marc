@@ -26,7 +26,7 @@ func newStats() stats {
 	return s
 }
 
-func (s stats) countRecord(r marc.Record) error {
+func (s stats) countRecord(r *marc.Record) error {
 	for _, df := range r.DataFields {
 		i, err := strconv.Atoi(df.Tag)
 		if err != nil {
@@ -139,7 +139,7 @@ func main() {
 	}
 }
 
-func filterCounts(filterTags []string, filterStats map[string]tagStats, rec marc.Record) {
+func filterCounts(filterTags []string, filterStats map[string]tagStats, rec *marc.Record) {
 	for _, df := range rec.DataFields {
 		for _, ft := range filterTags {
 			if df.Tag == ft[0:3] {

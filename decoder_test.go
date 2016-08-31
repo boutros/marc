@@ -150,13 +150,12 @@ func TestDecodeEncodeRoundtrip(t *testing.T) {
 		//{MARC, LineMARC},
 		//{LineMARC, LineMARC},
 		//{LineMarc, MARC},
-		//{MARC, MARCXML},
-		//{MARCXML, MARCXML},
-		//{MARCXML, LineMarc},
+		{MARC, MARCXML},
+		{MARCXML, MARCXML},
+		//{MARCXML, LineMARC},
 		//{LineMarc, LineMarc},
-		//{LineMarc, MARCXML},
-		//{MARCXML, MARC},
-
+		//{LineMARC, MARCXML},
+		{MARCXML, MARC},
 	}
 
 	// buffer used for decoding and encoding
@@ -182,8 +181,8 @@ func TestDecodeEncodeRoundtrip(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !r.Eq(r2) {
-			//fmt.Printf("%v\n\n", r)
-			//fmt.Printf("%v\n\n", r2)
+			fmt.Printf("%v\n\n", r)
+			fmt.Printf("%v\n\n", r2)
 			t.Fatalf("decode %s -> encode %s roundtrip failed", test.inF, test.outF)
 
 		}

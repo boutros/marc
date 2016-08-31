@@ -77,7 +77,7 @@ type Encoder struct {
 	f      Format
 }
 
-func (enc *Encoder) Encode(r Record) (err error) {
+func (enc *Encoder) Encode(r *Record) (err error) {
 	// TODO revise this writer solution
 	type writer interface {
 		io.Writer
@@ -247,8 +247,8 @@ func NewDecoder(r io.Reader, f Format) *Decoder {
 // DecodeAll consumes the input stream and returns all decoded records.
 // If there is an error, it will return, together with the succesfully
 // parsed MARC records up til then.
-func (d *Decoder) DecodeAll() ([]Record, error) {
-	res := []Record{}
+func (d *Decoder) DecodeAll() ([]*Record, error) {
+	res := make([]*Record, 0)
 	for r, err := d.Decode(); err != io.EOF; r, err = d.Decode() {
 		if err != nil {
 			return res, err
@@ -258,12 +258,12 @@ func (d *Decoder) DecodeAll() ([]Record, error) {
 	return res, nil
 }
 
-func (d *Decoder) Decode() (Record, error) {
+func (d *Decoder) Decode() (*Record, error) {
 	switch d.f {
 	case LineMARC:
 		return d.decodeLineMARC()
 	case MARCXML:
-		var r Record
+		r := NewRecord()
 		for {
 			t, _ := d.xmlDec.Token()
 			if t == nil {
@@ -272,7 +272,7 @@ func (d *Decoder) Decode() (Record, error) {
 			switch elem := t.(type) {
 			case xml.StartElement:
 				if elem.Name.Local == "record" {
-					err := d.xmlDec.DecodeElement(&r, &elem)
+					err := d.xmlDec.DecodeElement(r, &elem)
 					return r, err
 				}
 			}
@@ -333,10 +333,11 @@ func (d *Decoder) nextN(n int) string {
 	return string(d.input[start:d.pos])
 }
 
-func (d *Decoder) decodeLineMARC() (r Record, err error) {
+func (d *Decoder) decodeLineMARC() (r *Record, err error) {
 	if d.input, err = d.r.ReadBytes(0x5E); err != nil {
 		return r, err
 	}
+	r = NewRecord()
 	// Some records might include the ^ characters, notably in the leader,
 	// so we check to make sure we reached a record terminator
 	// TODO flag the record for replacement of ^ with space in leader and control fields
@@ -429,9 +430,9 @@ func (d *Decoder) decodeLineMARC() (r Record, err error) {
 	return r, nil
 }
 
-func (d *Decoder) decodeMARC() (Record, error) {
+func (d *Decoder) decodeMARC() (*Record, error) {
 	const recordTerminator = ''
-	var r Record
+	r := NewRecord()
 
 	b, err := d.r.ReadBytes(recordTerminator)
 	if err != nil && len(b) == 0 {
